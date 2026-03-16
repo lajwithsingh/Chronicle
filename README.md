@@ -54,7 +54,7 @@ Chronicle runs as a multi-agent pipeline:
 │   │   ├── narrative_validator.py      LlmAgent that checks narration quality and Veo prompt fitness
 │   │   ├── media_agent.py              Gemini 2.5 Flash Image multi-turn agent for storyboard generation
 │   │   ├── video_agent.py              Veo 3.1 agent — scene-by-scene video with last-frame continuity
-│   │   └── assembly_agent.py           FFmpeg pipeline — merges clips, narration, LUT grading, captions
+│   │   └── assembly_agent.py           FFmpeg pipeline — merges clips, narration, and LUT colour grading
 │   │
 │   ├── chronicle/
 │   │   └── agent.py                    ADK root agent registration entry point
