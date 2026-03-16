@@ -309,6 +309,7 @@ async def _generate_clip_with_retry(
     reference_images_b64: list[str] | None = None,
     visual_style: str = "cinematic",
     narration_duration: float = CLIP_DURATION,
+    _refs_stripped: bool = False,
 ) -> dict:
     """
     Generate, download, process and upload a single Veo clip.
@@ -449,6 +450,24 @@ async def _generate_clip_with_retry(
                 if attempt < VEO_RETRY_ATTEMPTS - 1:
                     await asyncio.sleep(backoff)
 
+    # If all attempts failed and we had reference images, retry once without them.
+    # A single bad or rejected reference should not permanently block the clip.
+    if not _refs_stripped and (start_frame_b64 or last_frame_b64 or reference_images_b64):
+        logger.warning(
+            "Clip window_%s: all %s attempts with reference images failed — retrying text-only",
+            window_index,
+            VEO_RETRY_ATTEMPTS,
+        )
+        return await _generate_clip_with_retry(
+            window_index, act, session_id, style_bible, lut_path, tmp_dir,
+            session_seed=session_seed,
+            start_frame_b64=None,
+            last_frame_b64=None,
+            reference_images_b64=None,
+            visual_style=visual_style,
+            narration_duration=narration_duration,
+            _refs_stripped=True,
+        )
     raise last_exc
 
 

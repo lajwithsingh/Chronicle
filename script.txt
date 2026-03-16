@@ -1,0 +1,15 @@
+Hello and welcome to GCP Deployment Demo. As you can see, I am on the Google Cloud Console and our Chronicle project is selected right here at the top.
+
+Let me start by navigating to APIs and Services — and then to Explore and Enable APIs. This gives us a clear picture of everything Chronicle is built on.
+
+The traffic here  are real pipeline runs. Chronicle is built on a wide range of Google Cloud services. To name the key ones: Vertex AI for all model inference, Firestore for session state, Cloud Storage for media assets, Text-to-Speech for narration, Knowledge Graph for historical context, and Cloud Build for the deployment itself.
+
+Now let's navigate to Firestore. We'll go into the default database — and here you can see our chronicle_sessions collection. Each document inside this collection represents a unique run of the pipeline. If I open one of these session documents, you can see it holds the complete end to end information — the research brief, narrative acts, storyboard prompts, character references, segment states, everything. From the moment a user enters a topic to the final assembled documentary, every stage is captured here. Nothing is lost, and the entire execution is fully auditable.
+
+Now let's move over to Cloud Storage. We have our chronicle-output bucket here. It has three folders. The images folder stores all the visuals the pipeline generates — character reference images built by our Reference Agent and storyboard images generated for each scene. The clips folder holds the individual video clips produced by Veo 3.1 for each segment of the documentary. And the finals folder is where the completed documentary ends up — the final assembled video that gets delivered back to the user.
+
+Now let's navigate to Cloud Run. As you can see, we have two services running — our frontend and our backend, both live. I'll open the frontend URL in the browser and set up a split view with the backend logs on the side. Now I am going to run the application — enter a topic and start the documentary generation. And shortly you will see the logs start getting generated on the right side.
+
+You can see the agents firing in sequence — research, validation, narrative, media, video. Every log line is a real API call hitting Google Cloud. This isn't a mock. This is the full pipeline, live.
+
+One topic in. A researched, narrated, visually consistent documentary out. Entirely on Google Cloud Platform.

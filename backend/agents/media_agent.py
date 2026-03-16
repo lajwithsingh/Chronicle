@@ -469,3 +469,74 @@ class InterleavedMediaAgent(BaseAgent):
             for task in tasks:
                 if not task.done():
                     task.cancel()
+
+        # Sequential retry pass — any segment that failed all concurrent attempts gets
+        # another go without competing for quota with other segments.
+        if failed_segments:
+            logger.info(
+                "Retry pass: %d segment(s) failed during concurrent phase — retrying sequentially",
+                len(failed_segments),
+            )
+            for retry_seg in segments:
+                act_num = retry_seg.get("segment_number", retry_seg.get("act_number", 0))
+                if act_num not in failed_segments:
+                    continue
+                logger.info("Retry pass: segment %s", act_num)
+                res = await _generate_act_media(
+                    client,
+                    retry_seg,
+                    character_collage=character_collage,
+                    key_figures=key_figures,
+                    visual_style=visual_style,
+                    max_retries=4,
+                )
+                image_url = _upload_storyboard_image(
+                    session_id, res["act_number"], res["image_b64"], res["image_mime"]
+                )
+                if image_url:
+                    failed_segments.discard(act_num)
+                persisted_result = {
+                    "segment_number": res["act_number"],
+                    "segment_title": res["act_title"],
+                    "narration_chunk": res["narration"],
+                    "image_url": image_url,
+                    "image_mime": res["image_mime"],
+                    "image_status": res.get("image_status", "ready") if image_url else "failed",
+                }
+                existing_media[act_num] = persisted_result
+                ordered_storyboard = [
+                    existing_media[s.get("segment_number", s.get("act_number", idx + 1))]
+                    for idx, s in enumerate(segments)
+                    if s.get("segment_number", s.get("act_number", idx + 1)) in existing_media
+                ]
+                await sync_state(
+                    session_id,
+                    {
+                        "media_segments": ordered_storyboard,
+                        "storyboard": ordered_storyboard,
+                        "storyboard_failed_segments": sorted(failed_segments),
+                        "pipeline_stage": "storyboard",
+                    },
+                    session_service,
+                    app_name,
+                    user_id,
+                )
+                yield Event(
+                    author=self.name,
+                    content=types.Content(
+                        role="model",
+                        parts=[
+                            types.Part.from_text(
+                                text=json.dumps({
+                                    "sse_type": "segment_media_done",
+                                    "segment_number": res["act_number"],
+                                    "segment_title": res["act_title"],
+                                    "narration_chunk": res["narration"],
+                                    "image_url": persisted_result.get("image_url"),
+                                    "image_mime": persisted_result["image_mime"],
+                                    "image_status": persisted_result.get("image_status", "ready"),
+                                })
+                            )
+                        ],
+                    ),
+                )
