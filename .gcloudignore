@@ -1,0 +1,33 @@
+# Ignore version control
+.git/
+.gitignore
+
+# Ignore secrets/environments
+.env
+.env.local
+.env.production
+.env.*
+**/venv/
+**/env/
+**/__pycache__/
+**/*.pyc
+
+# Ignore node_modules
+**/node_modules/
+
+# Ignore frontend build outputs
+**/.next/
+
+# Ignore gemini assistant artifacts
+.gemini/
+.ai/
+
+# Ignore editor/IDE configs
+.vscode/
+.idea/
+**/.DS_Store
+
+# Ignore large media/tmp outputs locally
+**/tmp/
+**/clips/
+**/finals/

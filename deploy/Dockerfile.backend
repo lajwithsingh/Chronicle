@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including ffmpeg for moviepy/imageio-ffmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code and assets
+COPY backend/ ./backend/
+
+# Set env placeholder (Google Cloud uses secrets or runtime vars usually)
+ENV GOOGLE_CLOUD_PROJECT=""
+ENV GOOGLE_CLOUD_LOCATION="us-central1"
+ENV PORT=8080
+
+EXPOSE 8080
+
+# Cloud Run execution command
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080"]

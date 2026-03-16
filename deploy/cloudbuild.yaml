@@ -1,0 +1,100 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/${PROJECT_ID}/${_BACKEND_SERVICE}:latest",
+        "-f",
+        "deploy/Dockerfile.backend",
+        ".",
+      ]
+    id: "build-backend"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/${PROJECT_ID}/${_BACKEND_SERVICE}:latest"]
+    id: "push-backend"
+    waitFor: ["build-backend"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "${_BACKEND_SERVICE}"
+      - "--image"
+      - "gcr.io/${PROJECT_ID}/${_BACKEND_SERVICE}:latest"
+      - "--region"
+      - "${_REGION}"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+      - "--timeout"
+      - "3600s"
+      - "--memory"
+      - "4Gi"
+      - "--cpu"
+      - "2"
+      - "--concurrency"
+      - "4"
+      - "--set-env-vars"
+      - "APP_NAME=Chronicle,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GEMINI_IMAGE_LOCATION=global,GCS_BUCKET=${_GCS_BUCKET},FIRESTORE_REQUIRED=true,ADK_SESSION_SERVICE=memory,GOOGLE_GENAI_USE_VERTEXAI=1,IMAGE_GENERATION_CONCURRENCY=2,IMAGE_REQUEST_SPACING_SECONDS=1.5"
+    id: "deploy-backend"
+    waitFor: ["push-backend"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-lc"
+      - |
+        gcloud run services describe "${_BACKEND_SERVICE}" \
+          --region "${_REGION}" \
+          --format='value(status.url)' > /workspace/backend_url.txt
+    id: "resolve-backend-url"
+    waitFor: ["deploy-backend"]
+
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args:
+      - "-lc"
+      - |
+        BACKEND_URL="$$(cat /workspace/backend_url.txt)"
+        docker build \
+          -t "gcr.io/${PROJECT_ID}/${_FRONTEND_SERVICE}:latest" \
+          -f deploy/Dockerfile.frontend \
+          --build-arg BACKEND_URL="$$BACKEND_URL" \
+          --build-arg NEXT_PUBLIC_BACKEND_URL="$$BACKEND_URL" \
+          .
+    id: "build-frontend"
+    waitFor: ["resolve-backend-url"]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/${PROJECT_ID}/${_FRONTEND_SERVICE}:latest"]
+    id: "push-frontend"
+    waitFor: ["build-frontend"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-lc"
+      - |
+        BACKEND_URL="$$(cat /workspace/backend_url.txt)"
+        gcloud run deploy "${_FRONTEND_SERVICE}" \
+          --image "gcr.io/${PROJECT_ID}/${_FRONTEND_SERVICE}:latest" \
+          --region "${_REGION}" \
+          --platform managed \
+          --allow-unauthenticated \
+          --timeout 300s \
+          --set-env-vars "BACKEND_URL=$$BACKEND_URL,NEXT_PUBLIC_BACKEND_URL=$$BACKEND_URL"
+    id: "deploy-frontend"
+    waitFor: ["push-frontend"]
+
+substitutions:
+  _REGION: "us-central1"
+  _BACKEND_SERVICE: "chronicle-backend"
+  _FRONTEND_SERVICE: "chronicle-frontend"
+  _GCS_BUCKET: "your-gcs-bucket-name"  # ← replace with your actual GCS bucket
+
+images:
+  - "gcr.io/${PROJECT_ID}/${_BACKEND_SERVICE}:latest"
+  - "gcr.io/${PROJECT_ID}/${_FRONTEND_SERVICE}:latest"

@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --chronicle-bg: #111111;
+}
+
+body {
+  background-color: #111111;
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle background glow from the top to emulate Chronicle screenshot */
+.dot-grid {
+  background: radial-gradient(circle at top center, rgba(204, 255, 0, 0.04) 0%, transparent 60%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111111; }
+::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #444444; }
